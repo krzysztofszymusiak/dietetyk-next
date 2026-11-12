@@ -12,14 +12,14 @@ export default function ZamowForm({ items, selected }) {
     setError("");
     const f = new FormData(e.currentTarget);
     try {
-      const res = await fetch("/api/p24/register", {
+      const res = await fetch("/api/paynow/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pakiet: f.get("pakiet"), imie: f.get("imie"), email: f.get("email") }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Błąd płatności");
-      window.location.href = data.url; // przekierowanie do Przelewy24
+      window.location.href = data.url; // przekierowanie do bramki mBank Paynow
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -36,7 +36,7 @@ export default function ZamowForm({ items, selected }) {
       <label><input type="checkbox" required /> Akceptuję regulamin i politykę prywatności</label>
       {error && <p style={{ color: "var(--no)", margin: 0 }}>{error}</p>}
       <button className="btn" type="submit" disabled={loading}>
-        {loading ? "Przekierowuję…" : "Zapłać z Przelewy24"}
+        {loading ? "Przekierowuję…" : "Zapłać z mBank Paynow"}
       </button>
       <Link href="/" style={{ textAlign: "center" }}>← Wróć na stronę główną</Link>
     </form>

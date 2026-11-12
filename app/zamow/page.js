@@ -9,7 +9,7 @@ export default async function Zamow({ searchParams }) {
     <section>
       <div className="w">
         <h2>Zamówienie</h2>
-        <p className="sub">Uzupełnij dane – po zatwierdzeniu przejdziesz do bezpiecznej płatności Przelewy24.</p>
+        <p className="sub">Uzupełnij dane – po zatwierdzeniu przejdziesz do bezpiecznej płatności mBank Paynow.</p>
         <ZamowForm items={[...PACKAGES, ...DIETS]} selected={pakiet} />
       </div>
     </section>
