@@ -7,7 +7,7 @@ export default function Packages() {
       <div className="w">
         <h2>Pakiety</h2>
         <p className="sub">Wybierz opcję dopasowaną do swoich potrzeb. {LOREM.slice(0, 60)}.</p>
-        <div className="grid g3">
+        <div className="grid g4">
           {PACKAGES.map((p) => (
             <div key={p.id} className={"card" + (p.pop ? " pop" : "")}>
               {p.pop && <span className="badge">Najpopularniejszy</span>}
