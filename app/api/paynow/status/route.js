@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { isConfigured, sign } from "../../../../lib/paynow";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { sendOrderEmail, escapeEmailHtml } from "../../../../lib/resend";
 
 const PAYNOW_STATUSES = new Set([
   "NEW",
@@ -12,7 +13,13 @@ const PAYNOW_STATUSES = new Set([
   "ERROR",
 ]);
 
-// Paynow wysyła tu zmiany statusu płatności (adres wpisujesz w panelu Paynow).
+function formatAmount(amountGrosze, currency) {
+  return new Intl.NumberFormat("pl-PL", {
+    style: "currency",
+    currency: currency || "PLN",
+  }).format((Number(amountGrosze) || 0) / 100);
+}
+
 export async function POST(req) {
   if (!isConfigured()) return new NextResponse("Not configured", { status: 503 });
 
@@ -44,11 +51,9 @@ export async function POST(req) {
     return new NextResponse("Invalid notification", { status: 400 });
   }
 
-  // Sprawdzamy, czy identyfikator zamówienia istnieje i czy paymentId
-  // zgadza się z płatnością przypisaną do tego zamówienia.
   const { data: order, error: findError } = await supabaseAdmin
     .from("orders")
-    .select("id, payment_status, paynow_payment_id")
+    .select("id, customer_name, customer_email, package_name, amount_grosze, currency, payment_status, paynow_payment_id, customer_email_sent, owner_email_sent")
     .eq("external_id", externalId)
     .maybeSingle();
 
@@ -67,8 +72,6 @@ export async function POST(req) {
     return new NextResponse("Payment mismatch", { status: 400 });
   }
 
-  // CONFIRMED jest stanem końcowym — późniejsze, opóźnione powiadomienie
-  // NEW/PENDING nie może cofnąć opłaconego zamówienia.
   const effectiveStatus =
     order.payment_status === "CONFIRMED" && status !== "CONFIRMED"
       ? "CONFIRMED"
@@ -88,8 +91,67 @@ export async function POST(req) {
   }
 
   if (effectiveStatus === "CONFIRMED") {
-    console.log("Opłacone zamówienie:", externalId, paymentId);
-    // Wysyłkę e-maili dodamy w kolejnym kroku (Resend), po zapisaniu statusu.
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail) {
+      console.error("Brakuje zmiennej ADMIN_EMAIL.");
+      return new NextResponse("Email configuration error", { status: 500 });
+    }
+
+    const name = escapeEmailHtml(order.customer_name);
+    const email = escapeEmailHtml(order.customer_email);
+    const packageName = escapeEmailHtml(order.package_name);
+    const amount = escapeEmailHtml(formatAmount(order.amount_grosze, order.currency));
+
+    try {
+      if (!order.customer_email_sent) {
+        await sendOrderEmail({
+          to: order.customer_email,
+          subject: "Potwierdzenie zakupu",
+          idempotencyKey: `order-customer-${order.id}`,
+          html: `
+            <h1>Dziękujemy za zakup!</h1>
+            <p>Cześć ${name},</p>
+            <p>Twoja płatność została potwierdzona.</p>
+            <p><strong>Pakiet:</strong> ${packageName}<br />
+            <strong>Kwota:</strong> ${amount}</p>
+            <p>Dziękujemy za zaufanie!</p>
+          `,
+        });
+
+        const { error } = await supabaseAdmin
+          .from("orders")
+          .update({ customer_email_sent: true })
+          .eq("id", order.id);
+        if (error) throw error;
+      }
+
+      if (!order.owner_email_sent) {
+        await sendOrderEmail({
+          to: adminEmail,
+          subject: `Nowe opłacone zamówienie: ${order.package_name}`,
+          idempotencyKey: `order-owner-${order.id}`,
+          html: `
+            <h1>Nowe opłacone zamówienie</h1>
+            <p><strong>Klient:</strong> ${name}</p>
+            <p><strong>E-mail:</strong> ${email}</p>
+            <p><strong>Pakiet:</strong> ${packageName}<br />
+            <strong>Kwota:</strong> ${amount}</p>
+            <p><strong>Numer zamówienia:</strong> ${escapeEmailHtml(externalId)}</p>
+          `,
+        });
+
+        const { error } = await supabaseAdmin
+          .from("orders")
+          .update({ owner_email_sent: true })
+          .eq("id", order.id);
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error("Nie udało się wysłać e-maili zamówienia:", error);
+      return new NextResponse("Email delivery failed", { status: 500 });
+    }
+
+    console.log("Opłacone zamówienie i obsłużone e-maile:", externalId, paymentId);
   }
 
   return new NextResponse("OK");
