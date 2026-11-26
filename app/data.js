@@ -22,7 +22,7 @@ export const PACKAGES = [
   {
     id: "premium", name: "Pakiet Premium", icon: "🏆", price: "950 zł", per: "/ 3 miesiące",
     image: "/images/meal-atlas.webp", imagePosition: "75% 0%", imageAlt: "Sałatka z rukolą, pomidorkami i burratą",
-    desc: "Maksymalne wsparcie i wyniki – trzymiesięczna opieka, która ma dać długotrwałe efekty. Szczegółowy opis zakresu Pakietu Premium wymaga jeszcze potwierdzenia.",
+    desc: "Maksymalne wsparcie i wyniki – trzymiesięczna opieka, która ma dać długotrwałe efekty.",
     items: [[1, "Trzy spersonalizowane jadłospisy"], [1, "Regularne monitorowanie postępów"], [1, "Indywidualny plan suplementacji"], [1, "Porady o aktywności fizycznej"], [1, "Newsletter z przepisami"], [1, "Raport podsumowujący postępy"]]
   },
 ];
