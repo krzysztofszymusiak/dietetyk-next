@@ -38,7 +38,7 @@ export default function ZamowForm({ items, selected }) {
     <div className="order-layout">
       <aside className="order-summary" aria-live="polite">
         <div className="order-image-wrap">
-          <img className="order-image" src={product.image} alt={product.imageAlt || product.name} />
+          <div className="order-image" role="img" aria-label={product.imageAlt || product.name} style={{ backgroundImage: `url(${product.image})`, backgroundPosition: product.imagePosition, backgroundSize: "500% 200%" }} />
         </div>
         <div className="order-summary-content">
           <span className="order-eyebrow">Wybrana oferta</span>
